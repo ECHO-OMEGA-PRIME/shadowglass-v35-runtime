@@ -93,7 +93,7 @@ def seed_taxonomy(
                 expected,
             )
             cursor.execute(
-                f"SELECT setval(pg_get_serial_sequence(%s, 'id'), %s, true)",
+                "SELECT setval(pg_get_serial_sequence(%s, 'id'), %s, true)",
                 (f"{storage.SCHEMA}.instrument_types", EXPECTED_COUNT),
             )
             status = "seeded"
