@@ -373,7 +373,7 @@ prepare_release() {
     "$temporary/.venv/bin/ruff" check --no-cache "$temporary"
     PYTHONPYCACHEPREFIX="$temporary/.venv/pycache" \
       "$temporary/.venv/bin/python" -m py_compile \
-      "$temporary"/{app,core,storage,relay,scraper,object_store,queue_worker,consumer_canary,scheduled_job,import_d1,import_kv,apply_endpoint_overrides,verify_endpoints,service,smoke_live,verify_recovered_contract,provision_credentials,cloudflare_reconcile}.py
+      "$temporary"/{app,core,storage,relay,scraper,object_store,queue_worker,consumer_canary,scheduled_job,import_d1,seed_instrument_types,import_kv,apply_endpoint_overrides,verify_endpoints,service,smoke_live,verify_recovered_contract,provision_credentials,cloudflare_reconcile}.py
     PYTHONPYCACHEPREFIX="$temporary/.venv/pycache" \
       "$temporary/.venv/bin/python" "$temporary/verify_recovered_contract.py"
     chown -R root:root "$temporary"
@@ -467,6 +467,9 @@ SQL
     >"$ROOT/staging-endpoint-verification-${RELEASE_ID}.json"
   "$RELEASE/.venv/bin/python" "$RELEASE/import_d1.py" \
     --dsn-file "$STAGING_CREDENTIALS/database-url" >"$ROOT/staging-d1-import-${RELEASE_ID}.json"
+  "$RELEASE/.venv/bin/python" "$RELEASE/seed_instrument_types.py" \
+    --dsn-file "$STAGING_CREDENTIALS/database-url" \
+    >"$ROOT/staging-instrument-types-${RELEASE_ID}.json"
   "$RELEASE/.venv/bin/python" "$RELEASE/apply_endpoint_overrides.py" \
     --dsn-file "$STAGING_CREDENTIALS/database-url" \
     >"$ROOT/staging-endpoint-overrides-${RELEASE_ID}.json"
@@ -491,6 +494,9 @@ provision_data() {
     >"$ROOT/endpoint-verification-${RELEASE_ID}.json"
   "$RELEASE/.venv/bin/python" "$RELEASE/import_d1.py" \
     --dsn-file "$CREDENTIALS/migration-database-url" >"$ROOT/d1-import-${RELEASE_ID}.json"
+  "$RELEASE/.venv/bin/python" "$RELEASE/seed_instrument_types.py" \
+    --dsn-file "$CREDENTIALS/migration-database-url" \
+    >"$ROOT/instrument-types-${RELEASE_ID}.json"
   "$RELEASE/.venv/bin/python" "$RELEASE/apply_endpoint_overrides.py" \
     --dsn-file "$CREDENTIALS/migration-database-url" \
     >"$ROOT/endpoint-overrides-${RELEASE_ID}.json"
@@ -515,6 +521,9 @@ verify_provisioning_compatibility() {
   "$RELEASE/.venv/bin/python" "$RELEASE/import_d1.py" \
     --dsn-file "$CREDENTIALS/migration-database-url" \
     >"$ROOT/provision-d1-recheck-${RELEASE_ID}.json"
+  "$RELEASE/.venv/bin/python" "$RELEASE/seed_instrument_types.py" \
+    --dsn-file "$CREDENTIALS/migration-database-url" \
+    >"$ROOT/provision-instrument-types-recheck-${RELEASE_ID}.json"
   "$RELEASE/.venv/bin/python" "$RELEASE/import_kv.py" \
     --dsn-file "$CREDENTIALS/migration-database-url" \
     --owned-key-sha256 "${OWNED_KV_HASHES[0]}" \
@@ -530,6 +539,7 @@ paths = {
     "credentials": root / f"provision-credentials-recheck-{release}.json",
     "schema": root / f"provision-schema-recheck-{release}.json",
     "d1": root / f"provision-d1-recheck-{release}.json",
+    "instrument_types": root / f"provision-instrument-types-recheck-{release}.json",
     "kv": root / f"provision-kv-recheck-{release}.json",
     "endpoints": root / f"provision-endpoint-recheck-{release}.json",
 }

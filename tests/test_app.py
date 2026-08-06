@@ -17,7 +17,7 @@ class FakeService:
     def stats(self) -> dict[str, int]:
         return {
             "counties": 102,
-            "instrument_types": 0,
+            "instrument_types": 21,
             "deed_records": 212600,
             "scrape_jobs": 0,
             "scrape_logs": 0,
@@ -45,7 +45,10 @@ class FakeService:
 
     def enqueue_county(self, **_: Any) -> list[tuple[int, bool]]:
         self.writes.append("county")
-        return [(index, True) for index in range(24)]
+        return [(index, True) for index in range(21)]
+
+    def instrument_type_count(self) -> int:
+        return 21
 
     def enqueue_discovery(self, **_: Any) -> tuple[int, bool]:
         self.writes.append("discover")

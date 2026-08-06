@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "source_worker_sha256": "c17f54dc2e9ce9829cf9bf845dfa36a11e6b8bbf044bfc01446e4c00f28c7735",
+  "instrument_types": [
+    {"id": 1, "name": "DEED", "code": null},
+    {"id": 2, "name": "WARRANTY DEED", "code": null},
+    {"id": 3, "name": "MINERAL DEED", "code": null},
+    {"id": 4, "name": "OIL AND GAS LEASE", "code": null},
+    {"id": 5, "name": "DEED OF TRUST", "code": null},
+    {"id": 6, "name": "RELEASE", "code": null},
+    {"id": 7, "name": "ASSIGNMENT", "code": null},
+    {"id": 8, "name": "AMENDMENT", "code": null},
+    {"id": 9, "name": "EASEMENT", "code": null},
+    {"id": 10, "name": "RIGHT OF WAY", "code": null},
+    {"id": 11, "name": "LIEN", "code": null},
+    {"id": 12, "name": "ABSTRACT OF JUDGMENT", "code": null},
+    {"id": 13, "name": "POWER OF ATTORNEY", "code": null},
+    {"id": 14, "name": "PLAT", "code": null},
+    {"id": 15, "name": "AFFIDAVIT", "code": null},
+    {"id": 16, "name": "ROYALTY DEED", "code": null},
+    {"id": 17, "name": "CORRECTION DEED", "code": null},
+    {"id": 18, "name": "AFFIDAVIT OF HEIRSHIP", "code": null},
+    {"id": 19, "name": "UCC FILING", "code": null},
+    {"id": 20, "name": "LIS PENDENS", "code": null},
+    {"id": 21, "name": "RATIFICATION", "code": null}
+  ]
+}

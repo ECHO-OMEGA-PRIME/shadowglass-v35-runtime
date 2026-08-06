@@ -63,6 +63,18 @@ BEGIN
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM cf_shadowglass_v35.migration_receipts
+         WHERE source_kind = 'source-taxonomy-v1'
+           AND source_identity = 'shadowglass-v35-instrument-types'
+           AND source_sha256 = '86c93f6e15decdd3cdfb5aaad59d23ec6a23129c38e6f65fc8299611892771a9'
+           AND source_count = 21 AND target_count = 21
+           AND source_digest = 'fadc787a2cb6457384740fbd0ef42e73cfba7311840ddbd628dead23528da863'
+           AND source_digest = target_digest
+           AND details @> '{"source_worker_sha256":"c17f54dc2e9ce9829cf9bf845dfa36a11e6b8bbf044bfc01446e4c00f28c7735","identity":"id+name+code","version":1}'::jsonb
+    ) THEN
+        RAISE EXCEPTION 'ShadowGlass v35 finalization refused: source-bound taxonomy receipt is missing';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM cf_shadowglass_v35.migration_receipts
          WHERE source_kind = 'kv_namespace'
            AND source_identity = 'shadowglass-v35'
            AND source_sha256 = kv_sha

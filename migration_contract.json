@@ -33,12 +33,18 @@
     "SCRAPE_QUEUE": "PostgreSQL leased queue with idempotency, retry, lease recovery, and dead-letter state",
     "RELAY_URL": "loopback-only ShadowGlass Master plus exact-origin allowlist; never caller-controlled"
   },
+  "instrument_taxonomy": {
+    "source": "exact array embedded in the hash-pinned rescued v35 worker",
+    "count": 21,
+    "semantic_sha256": "fadc787a2cb6457384740fbd0ef42e73cfba7311840ddbd628dead23528da863",
+    "neighbor_state_excluded": "Three v8-only types are deliberately excluded because they are absent from v35 source."
+  },
   "schedule": {
     "cloudflare_cron": "recovered provider schedule",
     "timezone": "UTC",
     "replacement": "shadowglass-v35-scheduled.timer",
     "overlap_control": "PostgreSQL advisory lock",
-    "legacy_trigger_reconciliation": "Provider state is inspected and backed up before any reversible cutover mutation."
+    "legacy_trigger_reconciliation": "The locked legacy Cloudflare account is not read or mutated during policy-safe deployment. Local consumer and timer remain disabled, while proof units verify their identities without creating a second producer."
   },
   "runtime": {
     "service_dir": "/home/forge/shadowglass-v35",

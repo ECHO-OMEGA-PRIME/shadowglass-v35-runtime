@@ -12,6 +12,14 @@
       "scrape_logs": 0
     }
   },
+  "instrument_taxonomy": {
+    "path": "instrument_types.json",
+    "manifest_sha256": "86c93f6e15decdd3cdfb5aaad59d23ec6a23129c38e6f65fc8299611892771a9",
+    "semantic_sha256": "fadc787a2cb6457384740fbd0ef42e73cfba7311840ddbd628dead23528da863",
+    "source_worker_sha256": "c17f54dc2e9ce9829cf9bf845dfa36a11e6b8bbf044bfc01446e4c00f28c7735",
+    "count": 21,
+    "reconciliation": "The rescued D1 table is empty; seed the exact 21-name array embedded in the rescued v35 worker and receipt its id+name+code subset."
+  },
   "kv": {
     "index_path": "/mnt/cf_kv_r2/kv_namespaces/shadowglass-v35-DEDUP_KV/keys.jsonl",
     "values_path": "/mnt/cf_kv_r2/kv_namespaces/shadowglass-v35-DEDUP_KV/values",

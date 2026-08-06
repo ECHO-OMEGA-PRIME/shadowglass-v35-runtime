@@ -208,6 +208,16 @@ class ShadowglassService:
             raise NotFound("instrument type not found")
         return dict(row)
 
+    def instrument_type_count(self) -> int:
+        """Return the live, attested taxonomy size used by bulk queue routes."""
+
+        with self.connection() as connection, connection.cursor() as cursor:
+            cursor.execute(f"SELECT count(*) AS count FROM {SCHEMA}.instrument_types")
+            row = cursor.fetchone()
+            if row is None:
+                return 0
+            return int(row["count"] if isinstance(row, Mapping) else row[0])
+
     def enqueue_scrape(
         self,
         *,

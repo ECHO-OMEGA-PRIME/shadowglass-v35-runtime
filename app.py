@@ -408,7 +408,11 @@ def scrape(body: ScrapeRequest, request: Request) -> dict[str, Any]:
 def scrape_all(body: ScrapeAllRequest, request: Request) -> dict[str, Any]:
     key = _idempotency(request)
     if _dry_run(request):
-        return {"status": "preview", "created": 0, "jobs": 24}
+        return {
+            "status": "preview",
+            "created": 0,
+            "jobs": get_service().instrument_type_count(),
+        }
     jobs = get_service().enqueue_county(county=body.county, idempotency_key=key)
     return {"status": "queued", "jobs": len(jobs), "created": sum(created for _, created in jobs)}
 
@@ -417,7 +421,11 @@ def scrape_all(body: ScrapeAllRequest, request: Request) -> dict[str, Any]:
 def scrape_multi(body: ScrapeMultiRequest, request: Request) -> dict[str, Any]:
     key = _idempotency(request)
     if _dry_run(request):
-        return {"status": "preview", "created": 0, "jobs": len(body.counties) * 24}
+        return {
+            "status": "preview",
+            "created": 0,
+            "jobs": len(body.counties) * get_service().instrument_type_count(),
+        }
     jobs: list[tuple[int, bool]] = []
     for index, county in enumerate(body.counties):
         jobs.extend(
@@ -433,7 +441,11 @@ def scrape_multi(body: ScrapeMultiRequest, request: Request) -> dict[str, Any]:
 def discover(body: DiscoverRequest, request: Request) -> dict[str, Any]:
     key = _idempotency(request)
     if _dry_run(request):
-        return {"status": "preview", "created": 0, "jobs": 24}
+        return {
+            "status": "preview",
+            "created": 0,
+            "jobs": get_service().instrument_type_count(),
+        }
     jobs = get_service().enqueue_discovery(county=body.county, idempotency_key=key)
     created = sum(was_created for _, was_created in jobs)
     return {"status": "queued", "created": created, "jobs": len(jobs)}

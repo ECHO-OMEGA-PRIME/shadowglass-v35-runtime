@@ -107,6 +107,9 @@ env \
 "$ACTIVE_RELEASE/.venv/bin/python" "$ACTIVE_RELEASE/import_d1.py" \
   --dsn-file "$CREDENTIALS/migration-database-url" \
   >"$ATTESTATION_DIR/d1-subset.json"
+"$ACTIVE_RELEASE/.venv/bin/python" "$ACTIVE_RELEASE/seed_instrument_types.py" \
+  --dsn-file "$CREDENTIALS/migration-database-url" \
+  >"$ATTESTATION_DIR/instrument-types.json"
 "$ACTIVE_RELEASE/.venv/bin/python" "$ACTIVE_RELEASE/import_kv.py" \
   --dsn-file "$CREDENTIALS/migration-database-url" \
   --owned-key-sha256 0ed4aba4fcb9e90290e6705b478271578df07711f7c8c406250573f4580ecbc1 \

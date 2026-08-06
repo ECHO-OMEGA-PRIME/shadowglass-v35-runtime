@@ -13,6 +13,7 @@ Raw rescued JavaScript, D1 rows, KV names/values, and credentials are deliberate
 - Authentication: `/health` is public; all other routes require the read token, and mutations require the distinct write token.
 - Service identities: separate non-login users for API, consumer, scheduler, and staging; only the consumer receives the scoped MinIO identity.
 - Database: `cf_shadowglass_v35` schema with distinct least-privilege API, consumer, scheduler, and migration roles.
+- Instrument taxonomy: the rescued D1 table is empty, so deployment seeds and receipts the exact 21-item array embedded in the hash-pinned v35 worker. Three types found only in neighboring v8 state are excluded; dry-run job counts are read from the live taxonomy rather than hardcoded.
 - Queue: leased claims, expiring-lease recovery, deterministic idempotency, bounded retry, and dead-letter state.
 - Scheduler: `shadowglass-v35-scheduled.timer`, exactly at minute zero each UTC hour.
 - Relay: loopback-only ShadowGlass Master, fixed paths, redirects denied, and DNS pinned per client lifetime. Validated L0 pages are retrieved directly over the same pinned public addresses when the Master has no private artifact.

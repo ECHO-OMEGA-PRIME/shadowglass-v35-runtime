@@ -53,6 +53,8 @@ def test_finalizer_requires_every_gate_and_exact_route_audit() -> None:
     assert '"active_count":7' in sql
     assert "source_kind = 'd1_imported_subset_v1'" in sql
     assert "source_kind = 'kv_imported_subset_v1'" in sql
+    assert "source_kind = 'source-taxonomy-v1'" in sql
+    assert "source_count = 21 AND target_count = 21" in sql
     assert "event.source_tree = release_tree" in sql
     assert "event.source_digest = release_digest" in sql
 
@@ -61,8 +63,16 @@ def test_deploy_verifies_endpoints_before_applying_overrides() -> None:
     script = (ROOT / "deploy_shadowglass_v35.sh").read_text(encoding="utf-8")
     verify = script.index('"$RELEASE/verify_endpoints.py"')
     import_d1 = script.index('"$RELEASE/import_d1.py"')
+    seed = script.index('"$RELEASE/seed_instrument_types.py"')
     apply = script.index('"$RELEASE/apply_endpoint_overrides.py"')
-    assert verify < import_d1 < apply
+    assert verify < import_d1 < seed < apply
+
+
+def test_deploy_and_finalizer_attest_source_bound_instrument_taxonomy() -> None:
+    deploy = (ROOT / "deploy_shadowglass_v35.sh").read_text(encoding="utf-8")
+    finalizer = (ROOT / "finalize_shadowglass_v35.sh").read_text(encoding="utf-8")
+    assert deploy.count('"$RELEASE/seed_instrument_types.py"') >= 3
+    assert '"$ACTIVE_RELEASE/seed_instrument_types.py"' in finalizer
 
 
 def test_deploy_is_git_bound_and_stages_before_production_provisioning() -> None:
