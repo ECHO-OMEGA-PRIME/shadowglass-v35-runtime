@@ -97,7 +97,7 @@ SOURCE_SELECT: dict[str, tuple[str, ...]] = {
     "counties": tuple(f'"{column}"' for column in TABLE_COLUMNS["counties"]),
     "deed_records": (
         '"id"',
-        'COALESCE("instrument_number", "doc_id")',
+        '"doc_id"',
         '"county"',
         '"instrument_type"',
         "NULL",
@@ -112,7 +112,7 @@ SOURCE_SELECT: dict[str, tuple[str, ...]] = {
         '"book"',
         '"page"',
         '"volume"',
-        'COALESCE("instrument_number", "doc_id")',
+        '"instrument_number"',
         '"consideration"',
         '"source_url"',
         "NULL",

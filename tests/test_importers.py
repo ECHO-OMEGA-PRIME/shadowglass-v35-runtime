@@ -59,6 +59,36 @@ def test_d1_source_projection_supports_subset_identity_checks(tmp_path: Path) ->
     assert projected == [(1, "Test", "TX", "https://example.test/", None, 0, None)]
 
 
+def test_d1_deed_projection_uses_unique_document_identity(tmp_path: Path) -> None:
+    rescue = tmp_path / "shadowglass-scraper.sqlite3"
+    _create_d1(rescue)
+    source_columns = import_d1.SOURCE_TABLE_COLUMNS["deed_records"]
+    values = {column: None for column in source_columns}
+    values.update(
+        id=1,
+        county="REEVES",
+        instrument_type="DEED",
+        doc_id="unique-document",
+        instrument_number="1958",
+    )
+    quoted = ", ".join(f'"{column}"' for column in source_columns)
+    placeholders = ", ".join("?" for _ in source_columns)
+    with sqlite3.connect(rescue) as connection:
+        connection.execute(
+            f'INSERT INTO "deed_records" ({quoted}) VALUES ({placeholders})',
+            tuple(values[column] for column in source_columns),
+        )
+        row = next(
+            import_d1._source_rows(
+                connection,
+                "deed_records",
+                import_d1.TABLE_COLUMNS["deed_records"],
+            )
+        )
+    assert row[1] == "unique-document"
+    assert row[16] == "1958"
+
+
 def test_d1_import_is_noop_when_receipt_and_target_match(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
