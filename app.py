@@ -64,7 +64,7 @@ SECURITY_HEADERS = {
 }
 MAX_BODY_BYTES = 128_000
 
-logger = logging.getLogger("echo.shadowglass.v8")
+logger = logging.getLogger("echo.shadowglass.v35")
 if not logger.handlers:
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(message)s"))

@@ -9,6 +9,7 @@ Raw rescued JavaScript, D1 rows, KV names/values, and credentials are deliberate
 - API: `127.0.0.1:8470`; staging: `127.0.0.1:8471`.
 - Public route: none is created by this repository. Provider edge state is inspected and backed up before any cutover mutation.
 - Cloudflare reconciliation: the cutover tool snapshots the exact active module, settings, queue consumer, schedules, and workers.dev state before making a reversible change. It refuses ambiguous drift, proves sustained zero backlog, and restores from a root-only multipart backup if any post-change check fails.
+- Legacy-account policy: normal deployment uses `--skip-cloudflare`; it does not read or mutate the locked legacy account, and it leaves the local consumer/timer disabled to avoid dual producers. Provider cutover requires a separately authorized policy change and the exact reversible backup gate.
 - Authentication: `/health` is public; all other routes require the read token, and mutations require the distinct write token.
 - Service identities: separate non-login users for API, consumer, scheduler, and staging; only the consumer receives the scoped MinIO identity.
 - Database: `cf_shadowglass_v35` schema with distinct least-privilege API, consumer, scheduler, and migration roles.

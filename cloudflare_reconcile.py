@@ -504,7 +504,7 @@ def _content_backup_restoreable() -> bool:
 
 
 def _multipart_upload(files: list[tuple[str, bytes]]) -> tuple[bytes, str]:
-    boundary = f"echo-sgv8-{os.urandom(16).hex()}"
+    boundary = f"echo-sgv35-{os.urandom(16).hex()}"
     chunks: list[bytes] = []
     metadata = json.dumps(
         {"main_module": files[0][0]}, separators=(",", ":"), sort_keys=True

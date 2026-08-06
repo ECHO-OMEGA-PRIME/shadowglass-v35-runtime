@@ -25,7 +25,7 @@ from relay import RelayClient
 
 
 MAX_RESPONSE_BYTES = 8_000_000
-USER_AGENT = "ShadowGlass-v8-Forge/9"
+USER_AGENT = "ShadowGlass-v35-Forge/35"
 
 
 class ScrapeError(RuntimeError):

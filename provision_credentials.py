@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import shutil
 import stat
 import subprocess
 import tempfile
 import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -23,7 +25,12 @@ SCHEDULER_ROLE = "cf_shadowglass_v35_scheduler"
 DATABASE = "echo"
 DEFAULT_DIRECTORY = Path("/etc/echo/credentials/shadowglass-v35")
 STAGING_DIRECTORY = Path("/etc/echo/credentials/shadowglass-v35-staging")
-CLOUDFLARE_ACCOUNT_ID = "b9af3a4bf161132bb7e5d3d365fb8bb0"
+CLOUDFLARE_ACCOUNT_SERVICE = "cloudflare"
+CLOUDFLARE_ACCOUNT_USERNAME = "account_id"
+MINIO_ADMIN_SERVICE = "harvested.minio.0000"
+MINIO_ADMIN_USERNAME = "echo-admin"
+SDK_URL = os.getenv("ECHO_SDK_URL", "http://127.0.0.1:8000/sdk/invoke")
+KEY_FILE = Path(os.getenv("ECHO_SOVEREIGN_KEY_FILE", "/home/forge/.echo_sovereign_key"))
 MINIO_ENDPOINT_CONFIG = Path(
     "/etc/systemd/system/echo-county-records.service.d/minio.conf"
 )
@@ -105,6 +112,44 @@ def _systemd_environment(path: Path) -> dict[str, str]:
     return values
 
 
+def _sovereign_key() -> str:
+    match = re.search(
+        r"SOVEREIGN_KEY\s*=\s*(\S+)",
+        KEY_FILE.read_text(encoding="utf-8"),
+    )
+    if not match:
+        raise RuntimeError("SDK credential unavailable")
+    return match.group(1)
+
+
+def _vault_secret(service: str, username: str, *, purpose: str) -> str:
+    payload = {
+        "envelope_version": 1,
+        "capability": "echo.vault.get",
+        "params": {
+            "command": "get",
+            "service": service,
+            "username": username,
+        },
+        "context": {"bypass_reason": purpose},
+    }
+    request = urllib.request.Request(
+        SDK_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "X-Echo-API-Key": _sovereign_key(),
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        result = json.loads(response.read())
+    secret = ((result.get("result") or {}).get("body") or {}).get("secret")
+    if not secret:
+        raise RuntimeError("Vault credential unavailable")
+    return str(secret).strip()
+
+
 def _minio_configuration() -> tuple[str, str, str]:
     public = _systemd_environment(MINIO_ENDPOINT_CONFIG)
     private = _systemd_environment(MINIO_CREDENTIAL_CONFIG)
@@ -119,6 +164,16 @@ def _minio_configuration() -> tuple[str, str, str]:
         or private.get("MINIO_SECRET_KEY")
         or ""
     ).strip()
+    if not access and not secret:
+        access = MINIO_ADMIN_USERNAME
+        secret = _vault_secret(
+            MINIO_ADMIN_SERVICE,
+            MINIO_ADMIN_USERNAME,
+            purpose=(
+                "Provision an isolated ShadowGlass v35 MinIO bucket and scoped service "
+                "identity during the verified reversible FORGE deployment gate."
+            ),
+        )
     parsed = urllib.parse.urlsplit(endpoint)
     if (
         parsed.scheme not in {"http", "https"}
@@ -187,7 +242,7 @@ def _mc_environment(endpoint: str, access: str, secret: str) -> dict[str, str]:
     quoted_access = urllib.parse.quote(access, safe="")
     quoted_secret = urllib.parse.quote(secret, safe="")
     parsed = urllib.parse.urlsplit(endpoint)
-    environment["MC_HOST_sgv8admin"] = urllib.parse.urlunsplit(
+    environment["MC_HOST_sgv35admin"] = urllib.parse.urlunsplit(
         (parsed.scheme, f"{quoted_access}:{quoted_secret}@{parsed.netloc}", "", "", "")
     )
     return environment
@@ -207,7 +262,7 @@ def _provision_minio_consumer(
     directory: Path, *, endpoint: str, admin_access: str, admin_secret: str
 ) -> None:
     access = _read_or_create(
-        directory / "minio-access-key", lambda: f"sgv8-{secrets.token_hex(12)}"
+        directory / "minio-access-key", lambda: f"sgv35-{secrets.token_hex(12)}"
     )
     secret = _read_or_create(
         directory / "minio-secret-key", lambda: secrets.token_urlsafe(48)
@@ -241,7 +296,7 @@ def _provision_minio_consumer(
         ],
     }
     _run_mc(
-        ["mb", "--ignore-existing", f"sgv8admin/{OUTPUT_BUCKET}"],
+        ["mb", "--ignore-existing", f"sgv35admin/{OUTPUT_BUCKET}"],
         endpoint=endpoint,
         access=admin_access,
         secret=admin_secret,
@@ -252,19 +307,19 @@ def _provision_minio_consumer(
     try:
         os.chmod(policy_path, stat.S_IRUSR)
         _run_mc(
-            ["admin", "policy", "create", "sgv8admin", policy_name, str(policy_path)],
+            ["admin", "policy", "create", "sgv35admin", policy_name, str(policy_path)],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
         )
         _run_mc(
-            ["admin", "user", "add", "sgv8admin", access, secret],
+            ["admin", "user", "add", "sgv35admin", access, secret],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
         )
         _run_mc(
-            ["admin", "policy", "attach", "sgv8admin", policy_name, "--user", access],
+            ["admin", "policy", "attach", "sgv35admin", policy_name, "--user", access],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
@@ -280,7 +335,7 @@ def _provision_minio_consumer(
 def _validated_staging_identity(database: str, bucket: str) -> None:
     import re
 
-    if not re.fullmatch(r"sgv8_stage_[0-9a-f]{12}", database):
+    if not re.fullmatch(r"sgv35_stage_[0-9a-f]{12}", database):
         raise ValueError("staging database identity is invalid")
     if not re.fullmatch(r"shadowglass-v35-stage-[0-9a-f]{12}", bucket):
         raise ValueError("staging bucket identity is invalid")
@@ -295,9 +350,9 @@ def _provision_staging_minio(
     admin_secret: str,
 ) -> None:
     suffix = bucket.rsplit("-", 1)[-1]
-    access = f"sgv8-stage-{suffix}"
+    access = f"sgv35-stage-{suffix}"
     secret = secrets.token_urlsafe(48)
-    policy_name = f"sgv8-stage-{suffix}"
+    policy_name = f"sgv35-stage-{suffix}"
     policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -324,7 +379,7 @@ def _provision_staging_minio(
         ],
     }
     _run_mc(
-        ["mb", "sgv8admin/" + bucket],
+        ["mb", "sgv35admin/" + bucket],
         endpoint=endpoint,
         access=admin_access,
         secret=admin_secret,
@@ -335,19 +390,19 @@ def _provision_staging_minio(
     try:
         os.chmod(policy_path, stat.S_IRUSR)
         _run_mc(
-            ["admin", "policy", "create", "sgv8admin", policy_name, str(policy_path)],
+            ["admin", "policy", "create", "sgv35admin", policy_name, str(policy_path)],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
         )
         _run_mc(
-            ["admin", "user", "add", "sgv8admin", access, secret],
+            ["admin", "user", "add", "sgv35admin", access, secret],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
         )
         _run_mc(
-            ["admin", "policy", "attach", "sgv8admin", policy_name, "--user", access],
+            ["admin", "policy", "attach", "sgv35admin", policy_name, "--user", access],
             endpoint=endpoint,
             access=admin_access,
             secret=admin_secret,
@@ -433,17 +488,17 @@ def _staging_cleanup(
     if directory != STAGING_DIRECTORY:
         raise ValueError("staging credential directory is not allowlisted")
     suffix = bucket.rsplit("-", 1)[-1]
-    policy_name = f"sgv8-stage-{suffix}"
-    runtime_access = f"sgv8-stage-{suffix}"
+    policy_name = f"sgv35-stage-{suffix}"
+    runtime_access = f"sgv35-stage-{suffix}"
     # Cleanup is deliberately idempotent so a failed partial create cannot
     # strand database state or credentials merely because its bucket is absent.
     commands = []
-    commands.append(["admin", "user", "remove", "sgv8admin", runtime_access])
+    commands.append(["admin", "user", "remove", "sgv35admin", runtime_access])
     commands.extend(
         (
-            ["admin", "policy", "remove", "sgv8admin", policy_name],
-            ["rm", "--recursive", "--force", "sgv8admin/" + bucket],
-            ["rb", "--force", "sgv8admin/" + bucket],
+            ["admin", "policy", "remove", "sgv35admin", policy_name],
+            ["rm", "--recursive", "--force", "sgv35admin/" + bucket],
+            ["rb", "--force", "sgv35admin/" + bucket],
         )
     )
     for command in commands:
@@ -455,7 +510,7 @@ def _staging_cleanup(
             stderr=subprocess.DEVNULL,
         )
     bucket_probe = subprocess.run(
-        ["mc", "--quiet", "stat", "sgv8admin/" + bucket],
+        ["mc", "--quiet", "stat", "sgv35admin/" + bucket],
         env=_mc_environment(minio_endpoint, minio_access, minio_secret),
         check=False,
         stdout=subprocess.DEVNULL,
@@ -464,14 +519,14 @@ def _staging_cleanup(
     if bucket_probe.returncode == 0:
         raise RuntimeError("staging bucket cleanup did not converge")
     user_probe = subprocess.run(
-        ["mc", "--quiet", "admin", "user", "info", "sgv8admin", runtime_access],
+        ["mc", "--quiet", "admin", "user", "info", "sgv35admin", runtime_access],
         env=_mc_environment(minio_endpoint, minio_access, minio_secret),
         check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     policy_probe = subprocess.run(
-        ["mc", "--quiet", "admin", "policy", "info", "sgv8admin", policy_name],
+        ["mc", "--quiet", "admin", "policy", "info", "sgv35admin", policy_name],
         env=_mc_environment(minio_endpoint, minio_access, minio_secret),
         check=False,
         stdout=subprocess.DEVNULL,
@@ -633,7 +688,17 @@ def main() -> int:
     _atomic_write(args.directory / "scheduler-database-url", scheduler_dsn)
     _atomic_write(args.directory / "relay-url", LOCAL_RELAY_ORIGIN)
     _atomic_write(args.directory / "relay-allowed-hosts", LOCAL_RELAY_HOST)
-    _atomic_write(args.directory / "cloudflare-account-id", CLOUDFLARE_ACCOUNT_ID)
+    cloudflare_account_id = _vault_secret(
+        CLOUDFLARE_ACCOUNT_SERVICE,
+        CLOUDFLARE_ACCOUNT_USERNAME,
+        purpose=(
+            "Bind the reversible ShadowGlass v35 provider reconciliation to the "
+            "authorized new Cloudflare account without embedding provider identity."
+        ),
+    )
+    if not re.fullmatch(r"[0-9a-f]{32}", cloudflare_account_id):
+        raise RuntimeError("Cloudflare account identity is invalid")
+    _atomic_write(args.directory / "cloudflare-account-id", cloudflare_account_id)
     _provision_minio_consumer(
         args.directory,
         endpoint=minio_endpoint,

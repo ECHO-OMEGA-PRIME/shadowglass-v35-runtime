@@ -74,7 +74,7 @@ def test_deploy_is_git_bound_and_stages_before_production_provisioning() -> None
     forced_gate = script.index('require_gate "forced_production_rollback"', staging)
     production = script.index("provision_data", forced_gate)
     assert staging < forced_gate < production
-    assert 'STAGING_DATABASE="sgv8_stage_${STAGING_SUFFIX}"' in script
+    assert 'STAGING_DATABASE="sgv35_stage_${STAGING_SUFFIX}"' in script
     assert 'STAGING_BUCKET="shadowglass-v35-stage-${STAGING_SUFFIX}"' in script
 
 
