@@ -1,25 +1,65 @@
 {
-  "worker_name": "shadowglass-v7-command",
+  "worker_name": "shadowglass-v35",
+  "migration_date": "2026-08-06",
   "provenance": {
     "canonical_catalog_source": {
-      "sha256": "f152b35554706e35f989524d52910077ca746e6f67a19a65039dd9686e382ab7"
+      "sha256": "d895330aa745f042a077aeebb5e3e3611305553d64942ada0ef3fac18de447fd"
     },
     "strict_recovered_bundle": {
-      "source_path": "/mnt/cf_kv_r2/workers/shadowglass-v7-command/source/index.js",
-      "sha256": "ae46a39a494e01049ce0bc6ca0fb25cec07e7f5f7e853edd645bba1da0cd410e"
-    }
+      "bytes": 103196,
+      "sha256": "c17f54dc2e9ce9829cf9bf845dfa36a11e6b8bbf044bfc01446e4c00f28c7735",
+      "source_path": "/mnt/cf_kv_r2/workers/shadowglass-v35/source/index.js"
+    },
+    "bindings_metadata_sha256": "f2641736ec38da62fa80655dc3d2af14faeeafa6653be23bb724c689a2e5f393",
+    "settings_metadata_sha256": "9bd8149b363ea81de949fa9983bba990ae4a189eedeafdaee994f804a70ed75e",
+    "manifest_metadata_sha256": "2525a0bb0a3ed7ed19e93c87a815b22ba738ec0a96b78b85a99b04ea3144d449",
+    "recovered_tree_sha256": "8159a9dc78531ec98ee04c3e546c457157c3a985c6b37202fdea44bee31bc074",
+    "recovered_tree_hash_algorithm": "sha256(length-prefixed-relative-path-and-bytes-v1)",
+    "recovered_tree_file_count": 6,
+    "relationship": "The inventory catalog identity and strict recovered bundle are independent identities. No byte-equivalence claim is made; the strict recovered deployment defines compatibility."
   },
-  "runtime": {
-    "service_dir": "/home/forge/shadowglass-v7-command",
-    "api_unit": "shadowglass-v7-command.service",
-    "timer_unit": "shadowglass-v7-command-scheduler.timer"
-  },
+  "handlers": {"fetch": true, "queue": true, "scheduled": true, "email": false},
   "routes": {
-    "contract_path": "evidence/route_contract.json",
     "source_count": 17,
     "target_count": 17,
     "tested_count": 17,
     "coverage": 1.0,
-    "omissions": []
-  }
+    "contract_path": "evidence/route_contract.json"
+  },
+  "bindings": {
+    "DB": "isolated PostgreSQL schema cf_shadowglass_v35 with verified transformed import",
+    "DEDUP_KV": "scoped PostgreSQL dedup_kv table; shared namespace import fails closed without an owned-key rule",
+    "R2_RECORDS": "legacy bucket had no referenced rescued rows; new documents use an isolated MinIO identity and bucket",
+    "SCRAPE_QUEUE": "PostgreSQL leased queue with idempotency, retry, lease recovery, and dead-letter state",
+    "RELAY_URL": "loopback-only ShadowGlass Master plus exact-origin allowlist; never caller-controlled"
+  },
+  "schedule": {
+    "cloudflare_cron": "recovered provider schedule",
+    "timezone": "UTC",
+    "replacement": "shadowglass-v35-scheduled.timer",
+    "overlap_control": "PostgreSQL advisory lock",
+    "legacy_trigger_reconciliation": "Provider state is inspected and backed up before any reversible cutover mutation."
+  },
+  "runtime": {
+    "service_dir": "/home/forge/shadowglass-v35",
+    "api_unit": "shadowglass-v35.service",
+    "consumer_unit": "shadowglass-v35-consumer.service",
+    "timer_unit": "shadowglass-v35-scheduled.timer",
+    "origin": "http://127.0.0.1:8470",
+    "staging_origin": "http://127.0.0.1:8471",
+    "hostname": null
+  },
+  "release_gate": {
+    "identity": "clean Git HEAD plus deterministic git-archive source digest",
+    "staging": "release-scoped disposable PostgreSQL database, MinIO bucket, credentials, route smoke, endpoint semantics, consumer canary, and scheduler proof",
+    "production_prerequisites": ["forced_staging_rollback", "forced_production_rollback"],
+    "finalization": "release-bound evidence digests, exact route audit, D1/KV reconciliation, and installed-unit byte equality"
+  },
+  "intentional_security_deltas": [
+    "Only /health is unauthenticated; all data, dashboard, scrape, queue-control, and relay-probe routes require scoped credentials.",
+    "The direct scrape route is durable-queue backed instead of bypassing retry and idempotency controls.",
+    "The public relay is replaced by loopback-only ShadowGlass Master validation with an exact-origin allowlist.",
+    "All imported counties start inactive; only the reviewed provider-compatible subset is reactivated after live verification.",
+    "No replacement public hostname is created without explicit routing evidence."
+  ]
 }

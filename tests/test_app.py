@@ -1,238 +1,202 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
-import pytest
 from fastapi.testclient import TestClient
 
-import app as command_app
-from app import Runtime, Settings
-from storage import DispatchReservation
+import app as module
 
 
-class FakeStore:
+class FakeService:
     def __init__(self) -> None:
-        self.dispatched: dict[str, tuple[int, str]] = {}
-        self.states: list[tuple[str, str]] = []
-        self.rate_allowed = True
+        self.writes: list[str] = []
 
-    def rate_limit(self, subject: str, action: str, limit: int) -> bool:
-        assert len(subject) == 64
-        assert limit == 60
-        return self.rate_allowed
+    def health(self) -> dict[str, str]:
+        return {"database": "healthy"}
 
-    def reserve_dispatch(self, *, idempotency_key: str, target: str, action: str, payload: dict[str, Any]) -> DispatchReservation:
-        if idempotency_key in self.dispatched:
-            return DispatchReservation(self.dispatched[idempotency_key][0], False, self.dispatched[idempotency_key][1])
-        receipt = len(self.dispatched) + 1
-        self.dispatched[idempotency_key] = (receipt, "dispatching")
-        return DispatchReservation(receipt, True, "dispatching")
+    def stats(self) -> dict[str, int]:
+        return {
+            "counties": 102,
+            "instrument_types": 0,
+            "deed_records": 212600,
+            "scrape_jobs": 0,
+            "scrape_logs": 0,
+            "r2_uploads": 0,
+            "queue_pending": 0,
+            "queue_processing": 0,
+            "queue_dead": 0,
+        }
 
-    def mark_dispatched(self, receipt_id: int) -> None:
-        for key, (candidate, _) in list(self.dispatched.items()):
-            if candidate == receipt_id:
-                self.dispatched[key] = (candidate, "dispatched")
+    def counties(self) -> list[dict[str, Any]]:
+        return [{"id": 1, "name": "Test", "state": "TX", "platform": "tyler", "is_active": 1}]
 
-    def mark_failed(self, receipt_id: int, error_class: str) -> None:
-        raise AssertionError(error_class)
+    def search(self, **_: Any) -> dict[str, Any]:
+        return {"records": [], "total": 0, "limit": 50, "offset": 0}
 
-    def query(self, statement: str, params: tuple[Any, ...], *, limit: int = 500) -> list[dict[str, Any]]:
-        if statement == "ping":
-            return [{"ok": 1}]
-        if statement == "stats":
-            return [{"counties": 1, "instrument_types": 2, "records": 3, "jobs": 4}]
-        if statement == "counties":
-            return [{"id": 1, "name": "Midland", "platform": "tyler", "is_active": 1}]
-        if statement == "record":
-            return [{"id": 1, "external_id": "doc-1"}]
-        if statement == "search":
-            return [{"id": 1}]
-        if statement == "schedules":
-            return []
-        return []
+    def record(self, record_id: int) -> dict[str, Any]:
+        return {"id": record_id, "county": "Test"}
 
-    def set_job_state(self, county: str, state: str) -> int:
-        self.states.append((county, state))
-        return 2
+    def jobs(self, county: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        return [{"id": 1, "county": county or "Test", "status": "completed"}]
 
-    def resolve_context(self, county: str, instrument_type: str, platform: str) -> dict[str, Any]:
-        return {"county_id": 1, "county": county, "instrument_type_id": 2, "instrument_type": instrument_type, "platform": platform}
+    def enqueue_scrape(self, **_: Any) -> tuple[int, bool]:
+        self.writes.append("scrape")
+        return 9, True
 
-    def resolve_contexts(self, counties: list[str], platform: str, instrument_type: str | None, *, limit: int = 100) -> list[dict[str, Any]]:
-        return [{"county_id": index + 1, "county": county, "instrument_type_id": 2, "instrument_type": instrument_type or "Deed", "platform": platform} for index, county in enumerate(counties[:limit])]
+    def enqueue_county(self, **_: Any) -> list[tuple[int, bool]]:
+        self.writes.append("county")
+        return [(index, True) for index in range(24)]
 
-    def advance_schedule(self, schedule_id: int) -> None:
-        raise AssertionError(schedule_id)
+    def enqueue_discovery(self, **_: Any) -> tuple[int, bool]:
+        self.writes.append("discover")
+        return 10, True
+
+    def set_paused(self, job_id: int, paused: bool) -> dict[str, Any]:
+        self.writes.append("paused" if paused else "resumed")
+        return {"id": job_id, "status": "paused" if paused else "pending"}
 
 
-@dataclass
-class FakeProducer:
-    sent: list[tuple[str, dict[str, Any]]]
-
-    def send(self, target: str, payload: dict[str, Any]) -> None:
-        self.sent.append((target, payload))
-
-
-@pytest.fixture()
-def runtime() -> Runtime:
-    settings = Settings(
-        database_url="postgresql://unused",
-        command_key="command-secret",
-        cors_origins=("https://throne.echo-op.com",),
-        account_id="a" * 32,
-        queue_token="provider-secret",
-        queue_ids={"publicsearch": "1" * 32, "texasfile": "2" * 32, "tyler": "3" * 32},
-        version="test-release",
-        environment="test",
+def client(monkeypatch: Any) -> tuple[TestClient, FakeService]:
+    service = FakeService()
+    monkeypatch.setattr(module, "_service", service)
+    monkeypatch.setattr(
+        module,
+        "_token",
+        lambda name: {
+            "api_read_token": "read-token",
+            "api_write_token": "write-token",
+            "api_smoke_token": "smoke-token",
+        }.get(name, ""),
     )
-    return Runtime(settings=settings, store=FakeStore(), producer=FakeProducer([]))
+    module.limiter = module.SlidingWindowLimiter()
+    return TestClient(module.app), service
 
 
-@pytest.fixture()
-def client(runtime: Runtime, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    command_app.app.dependency_overrides[command_app._runtime] = lambda: runtime
-    monkeypatch.setattr(command_app, "get_runtime", lambda: runtime)
-    with TestClient(command_app.app) as test_client:
-        yield test_client
-    command_app.app.dependency_overrides.clear()
+def headers(token: str = "read-token") -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
-def auth() -> dict[str, str]:
-    return {"X-Echo-Command-Key": "command-secret"}
-
-
-def mutation(key: str = "acceptance-key") -> dict[str, str]:
-    return {**auth(), "Idempotency-Key": key}
-
-
-def test_exact_route_contract() -> None:
-    pairs = sorted(
-        (method, route.path.replace("{record_id}", "{}").replace("{county}", "{}"))
-        for route in command_app.app.routes
-        for method in route.methods
-    )
-    assert pairs == [
+def test_exact_recovered_route_contract() -> None:
+    expected = {
         ("GET", "/"),
-        ("GET", "/counties"),
         ("GET", "/dashboard"),
         ("GET", "/health"),
-        ("GET", "/record/{}"),
-        ("GET", "/search"),
         ("GET", "/stats"),
+        ("GET", "/counties"),
+        ("GET", "/search"),
+        ("GET", "/record/{id}"),
         ("GET", "/status"),
-        ("GET", "/status/{}"),
+        ("GET", "/status/{county}"),
         ("GET", "/test/tyler"),
-        ("POST", "/discover"),
-        ("POST", "/pause/{}"),
-        ("POST", "/resume/{}"),
         ("POST", "/scrape"),
         ("POST", "/scrape/all"),
         ("POST", "/scrape/multi"),
-        ("POST", "/scrape/platform"),
-    ]
+        ("POST", "/discover"),
+        ("POST", "/pause/{id}"),
+        ("POST", "/resume/{id}"),
+        ("POST", "/scrape/direct"),
+    }
+    actual: set[tuple[str, str]] = set()
+    for route in module.app.routes:
+        path = getattr(route, "path", "")
+        for method in getattr(route, "methods", set()):
+            if method in {"GET", "POST"}:
+                actual.add((method, path))
+    assert actual == expected
 
 
-def test_public_health_and_security_headers(client: TestClient) -> None:
-    response = client.get("/health")
+def test_health_and_read_routes(monkeypatch: Any) -> None:
+    api, _ = client(monkeypatch)
+    response = api.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "status": "healthy", "version": "test-release"}
-    assert response.headers["x-content-type-options"] == "nosniff"
-    assert response.headers["x-frame-options"] == "DENY"
-    assert response.headers["strict-transport-security"].startswith("max-age=")
-
-
-def test_cors_is_exact_allowlist(client: TestClient) -> None:
-    allowed = client.options("/scrape", headers={"Origin": "https://throne.echo-op.com"})
-    blocked = client.options("/scrape", headers={"Origin": "https://example.invalid"})
-    assert allowed.status_code == 204
-    assert allowed.headers["access-control-allow-origin"] == "https://throne.echo-op.com"
-    assert blocked.status_code == 403
-    assert "access-control-allow-origin" not in blocked.headers
-
-
-def test_mutation_requires_authentication(client: TestClient) -> None:
-    response = client.post("/scrape", headers={"Idempotency-Key": "acceptance-key"}, json={"county": "Midland", "instrument_type": "Deed", "platform": "tyler"})
-    assert response.status_code == 401
-
-
-def test_mutation_requires_idempotency(client: TestClient) -> None:
-    response = client.post("/scrape", headers=auth(), json={"county": "Midland", "instrument_type": "Deed", "platform": "tyler"})
-    assert response.status_code == 400
-
-
-def test_scrape_dispatches_canonical_payload(client: TestClient, runtime: Runtime) -> None:
-    response = client.post("/scrape", headers=mutation(), json={"county": "Midland", "instrument_type": "Deed", "platform": "tyler", "start_page": 2, "end_page": 4})
-    assert response.status_code == 200
-    assert response.json()["state"] == "dispatched"
-    assert runtime.producer.sent == [("tyler", {"type": "scrape", "county": "Midland", "countyId": 1, "instrumentType": "Deed", "instrumentTypeId": 2, "platform": "tyler", "startPage": 2, "endPage": 4, "retry": 0})]
-
-
-def test_duplicate_dispatch_is_not_sent_twice(client: TestClient, runtime: Runtime) -> None:
-    body = {"county": "Midland", "instrument_type": "Deed", "platform": "publicsearch"}
-    first = client.post("/discover", headers=mutation("dedupe-key"), json=body)
-    second = client.post("/discover", headers=mutation("dedupe-key"), json=body)
-    assert first.status_code == second.status_code == 200
-    assert second.json()["duplicate"] is True
-    assert len(runtime.producer.sent) == 1
-
-
-def test_invalid_page_range_fails_closed(client: TestClient) -> None:
-    response = client.post("/scrape", headers=mutation(), json={"county": "Midland", "instrument_type": "Deed", "platform": "tyler", "start_page": 9, "end_page": 2})
-    assert response.status_code == 400
-
-
-def test_extra_payload_field_is_rejected(client: TestClient) -> None:
-    response = client.post("/scrape", headers=mutation(), json={"county": "Midland", "instrument_type": "Deed", "platform": "tyler", "baseUrl": "https://attacker.invalid"})
-    assert response.status_code == 422
-
-
-def test_pause_and_resume_are_bounded(client: TestClient, runtime: Runtime) -> None:
-    paused = client.post("/pause/Midland", headers=mutation("pause-key"))
-    resumed = client.post("/resume/Midland", headers=mutation("resume-key"))
-    assert paused.json()["changed"] == resumed.json()["changed"] == 2
-    assert runtime.store.states == [("Midland", "paused"), ("Midland", "pending")]
-
-
-def test_sensitive_reads_require_auth(client: TestClient) -> None:
-    assert client.get("/status").status_code == 401
-    assert client.get("/record/doc-1").status_code == 401
-    assert client.get("/search?q=deed").status_code == 401
-    assert client.get("/record/doc-1", headers=auth()).status_code == 200
-    assert client.get("/search?q=deed", headers=auth()).status_code == 200
-
-
-def test_rate_limit_blocks_mutation(client: TestClient, runtime: Runtime) -> None:
-    runtime.store.rate_allowed = False
-    response = client.get("/test/tyler", headers=mutation("canary-key"))
-    assert response.status_code == 429
-    assert runtime.producer.sent == []
-
-
-def test_multi_dispatch_has_bound(client: TestClient) -> None:
-    jobs = [{"county": f"County {index}", "instrument_type": "Deed", "platform": "tyler"} for index in range(101)]
-    response = client.post("/scrape/multi", headers=mutation(), json={"jobs": jobs})
-    assert response.status_code == 422
-
-
-def test_fanout_accepts_maximum_length_parent_key(client: TestClient, runtime: Runtime) -> None:
-    response = client.post(
-        "/scrape/multi",
-        headers=mutation("a" * 180),
-        json={"jobs": [{"county": "Midland", "instrument_type": "Deed", "platform": "tyler"}]},
+    assert response.json()["status"] == "healthy"
+    for name, expected in module.SECURITY_HEADERS.items():
+        assert response.headers[name] == expected
+    reads = (
+        ("/", "text/html"),
+        ("/dashboard", "text/html"),
+        ("/stats", "application/json"),
+        ("/counties", "application/json"),
+        ("/search?q=lease", "application/json"),
+        ("/record/1", "application/json"),
+        ("/status", "application/json"),
+        ("/status/Test", "application/json"),
+        ("/test/tyler?county=Test", "application/json"),
     )
-    assert response.status_code == 200
-    derived_key = next(iter(runtime.store.dispatched))
-    assert len(derived_key) <= 180
-    assert command_app.SAFE_KEY.fullmatch(derived_key)
+    for path, content_type in reads:
+        response = api.get(path, headers=headers())
+        assert response.status_code == 200, path
+        assert content_type in response.headers["content-type"]
 
 
-def test_dashboard_is_not_placeholder(client: TestClient) -> None:
-    response = client.get("/dashboard")
-    assert response.status_code == 200
-    assert "FORGE command plane is online" in response.text
-    assert "TODO" not in response.text
+def test_auth_scope_and_cors(monkeypatch: Any) -> None:
+    api, _ = client(monkeypatch)
+    assert api.get("/stats").status_code == 401
+    assert api.get("/stats", headers=headers("invalid")).status_code == 403
+    body = {"county": "Test", "instrumentType": "Deed", "startPage": 1}
+    write_headers = {**headers("read-token"), "X-Idempotency-Key": "test-read-scope"}
+    assert api.post("/scrape", headers=write_headers, json=body).status_code == 403
+    assert api.options("/stats", headers={"Origin": "https://untrusted.invalid"}).status_code == 403
+    response = api.get("/stats", headers={**headers(), "Origin": "https://untrusted.invalid"})
+    assert "access-control-allow-origin" not in response.headers
 
 
-def test_scheduler_is_idle_by_default(runtime: Runtime) -> None:
-    assert runtime.run_schedules() == {"eligible": 0, "dispatched": 0}
+def test_all_write_routes_are_dry_run_safe(monkeypatch: Any) -> None:
+    api, service = client(monkeypatch)
+    common = {
+        **headers("write-token"),
+        "X-Shadowglass-Smoke-Token": "smoke-token",
+    }
+    requests = (
+        ("/scrape", {"county": "Test", "instrumentType": "Deed", "startPage": 1}),
+        ("/scrape/all", {"county": "Test"}),
+        ("/scrape/multi", {"counties": ["Test", "Demo"]}),
+        ("/discover", {"county": "Test"}),
+        ("/pause/1", None),
+        ("/resume/1", None),
+        ("/scrape/direct", {"county": "Test", "instrumentType": "Deed", "pages": 2}),
+    )
+    for index, (path, body) in enumerate(requests):
+        request_headers = {**common, "X-Idempotency-Key": f"smoke-write-{index}"}
+        response = api.post(path, headers=request_headers, json=body)
+        assert response.status_code in {200, 202}, path
+        assert "preview" in str(response.json())
+    assert service.writes == []
+
+
+def test_legacy_smoke_header_cannot_suppress_a_write(monkeypatch: Any) -> None:
+    api, service = client(monkeypatch)
+    response = api.post(
+        "/scrape",
+        headers={
+            **headers("write-token"),
+            "X-Idempotency-Key": "legacy-smoke-header-0001",
+            "X-Shadowglass-Smoke-Test": "1",
+        },
+        json={"county": "Test", "instrumentType": "Deed", "startPage": 1},
+    )
+    assert response.status_code == 202
+    assert service.writes == ["scrape"]
+
+
+def test_write_and_idempotency_validation(monkeypatch: Any) -> None:
+    api, service = client(monkeypatch)
+    body = {"county": "Test", "instrumentType": "Deed", "startPage": 1}
+    assert api.post("/scrape", headers=headers("write-token"), json=body).status_code == 400
+    response = api.post(
+        "/scrape",
+        headers={**headers("write-token"), "X-Idempotency-Key": "real-write-0001"},
+        json=body,
+    )
+    assert response.status_code == 202
+    assert response.json()["job_id"] == 9
+    assert service.writes == ["scrape"]
+
+
+def test_invalid_and_oversized_requests_are_bounded(monkeypatch: Any) -> None:
+    api, _ = client(monkeypatch)
+    write = {**headers("write-token"), "X-Idempotency-Key": "invalid-body-0001"}
+    assert api.post("/scrape", headers=write, json={"county": "../bad"}).status_code == 422
+    oversized = "x" * (module.MAX_BODY_BYTES + 1)
+    assert api.post("/scrape", headers=write, content=oversized).status_code == 413
+    assert api.get("/missing", headers=headers()).status_code == 404

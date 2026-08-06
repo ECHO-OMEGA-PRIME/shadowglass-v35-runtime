@@ -1,0 +1,42 @@
+{
+  "d1": {
+    "source_path": "/mnt/cf_d1/d1_databases/shadowglass-scraper/shadowglass-scraper.sqlite3",
+    "sha256": "72926ce6bf1605d577f5e38c43e2ef4376021b63422dfedc0c5a11b3ab53f200",
+    "integrity": "ok",
+    "expected_counts": {
+      "counties": 102,
+      "deed_records": 212600,
+      "instrument_types": 0,
+      "r2_uploads": 0,
+      "scrape_jobs": 0,
+      "scrape_logs": 0
+    }
+  },
+  "kv": {
+    "index_path": "/mnt/cf_kv_r2/kv_namespaces/shadowglass-v35-DEDUP_KV/keys.jsonl",
+    "values_path": "/mnt/cf_kv_r2/kv_namespaces/shadowglass-v35-DEDUP_KV/values",
+    "index_sha256": "5722a985d51eba21b56be703fded5954fafee6f6d552960ebe9ae3d6cb962731",
+    "index_records": 2,
+    "value_blobs": 2,
+    "shared_namespace": true,
+    "import_policy": "import only the two explicitly hash-identified v35-owned keys"
+  },
+  "r2": {
+    "binding_bucket": "echo-prime-knowledge",
+    "archive_present": false,
+    "referencing_rows": 0,
+    "http_read_routes": 0,
+    "status": "no-referenced-rescued-rows-new-writes-minio",
+    "replacement_bucket": "shadowglass-v35",
+    "replacement_write_prefix": "SHADOWGLASS_V35/",
+    "write_verification": "lease-fenced immutable put plus full-body digest readback and targeted consumer acceptance canary"
+  },
+  "endpoint_overrides": {
+    "path": "endpoint_overrides.json",
+    "sha256": "64adbf406dd30bf1723dc9cfbd35fc6cc0c24d143ae8b01ca323eccdbb717d00",
+    "county_count": 18,
+    "active_supported_count": 7,
+    "inactive_retired_or_unsupported_count": 11,
+    "live_verification": "all active endpoints must pass before D1 import and activation"
+  }
+}

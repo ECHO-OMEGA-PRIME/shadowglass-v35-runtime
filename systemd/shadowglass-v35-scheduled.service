@@ -1,0 +1,41 @@
+[Unit]
+Description=ShadowGlass v35 hourly enqueue
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=shadowglass-v35-scheduler
+Group=shadowglass-v35-scheduler
+WorkingDirectory=/opt/shadowglass-v35-runtime
+BindReadOnlyPaths=/home/forge/shadowglass-v35/current:/opt/shadowglass-v35-runtime
+InaccessiblePaths=-/opt/shadowglass-v35-runtime/src -/opt/shadowglass-v35-runtime/evidence -/opt/shadowglass-v35-runtime/legacy
+LoadCredential=database_url:/etc/echo/credentials/shadowglass-v35/scheduler-database-url
+ExecStart=/opt/shadowglass-v35-runtime/.venv/bin/python /opt/shadowglass-v35-runtime/scheduled_job.py
+TimeoutStartSec=300
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=256M
+TasksMax=32
+LimitNOFILE=1024

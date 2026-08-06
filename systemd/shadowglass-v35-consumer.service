@@ -1,0 +1,53 @@
+[Unit]
+Description=ShadowGlass v35 durable queue consumer
+After=network-online.target postgresql.service shadowglass-master.service shadowglass-v35.service
+Wants=network-online.target shadowglass-master.service
+
+[Service]
+Type=simple
+User=shadowglass-v35-consumer
+Group=shadowglass-v35-consumer
+WorkingDirectory=/opt/shadowglass-v35-runtime
+BindReadOnlyPaths=/home/forge/shadowglass-v35/current:/opt/shadowglass-v35-runtime
+InaccessiblePaths=-/opt/shadowglass-v35-runtime/src -/opt/shadowglass-v35-runtime/evidence -/opt/shadowglass-v35-runtime/legacy
+LoadCredential=database_url:/etc/echo/credentials/shadowglass-v35/consumer-database-url
+LoadCredential=relay_url:/etc/echo/credentials/shadowglass-v35/relay-url
+LoadCredential=relay_allowed_hosts:/etc/echo/credentials/shadowglass-v35/relay-allowed-hosts
+LoadCredential=minio_endpoint:/etc/echo/credentials/shadowglass-v35/minio-endpoint
+LoadCredential=minio_access_key:/etc/echo/credentials/shadowglass-v35/minio-access-key
+LoadCredential=minio_secret_key:/etc/echo/credentials/shadowglass-v35/minio-secret-key
+LoadCredential=minio_bucket:/etc/echo/credentials/shadowglass-v35/minio-bucket
+ExecStart=/opt/shadowglass-v35-runtime/.venv/bin/python /opt/shadowglass-v35-runtime/queue_worker.py --loop --worker-id forge-shadowglass-v35 --idle-seconds 2 --lease-seconds 120
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=512M
+TasksMax=64
+LimitNOFILE=2048
+
+[Install]
+WantedBy=multi-user.target

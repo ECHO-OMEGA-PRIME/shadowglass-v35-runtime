@@ -1,0 +1,13 @@
+{
+  "namespace": "shadowglass-v35-DEDUP_KV",
+  "ownership_basis": "Both rescued values belong to the ShadowGlass-family namespace bound by this deployment; raw key names are intentionally omitted.",
+  "key_name_sha256": [
+    "0ed4aba4fcb9e90290e6705b478271578df07711f7c8c406250573f4580ecbc1",
+    "6ab5dd227af217d945a270e0b36e34a09b77661ad78fe8e32d4e3e14e0c5736d"
+  ],
+  "value_blob_sha256": [
+    "1e0969d155de661a513b63a4222a42aa80a5540795a8665cadeb81a54bf32982",
+    "3e50336c2ed0f99ca6c8488ff2355e9ebd635d8eca9f2976c1a9af82645417c0"
+  ],
+  "expected_owned_count": 2
+}

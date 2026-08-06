@@ -1,0 +1,46 @@
+[Unit]
+Description=ShadowGlass v35 staging API
+After=network-online.target postgresql.service shadowglass-master.service
+Wants=network-online.target shadowglass-master.service
+
+[Service]
+Type=simple
+User=shadowglass-v35-staging
+Group=shadowglass-v35-staging
+WorkingDirectory=/opt/shadowglass-v35-staging
+BindReadOnlyPaths=/home/forge/shadowglass-v35/candidate:/opt/shadowglass-v35-staging
+InaccessiblePaths=-/opt/shadowglass-v35-staging/src -/opt/shadowglass-v35-staging/evidence -/opt/shadowglass-v35-staging/legacy
+LoadCredential=api_read_token:/etc/echo/credentials/shadowglass-v35-staging/api-read-token
+LoadCredential=api_write_token:/etc/echo/credentials/shadowglass-v35-staging/api-write-token
+LoadCredential=api_smoke_token:/etc/echo/credentials/shadowglass-v35-staging/api-smoke-token
+LoadCredential=database_url:/etc/echo/credentials/shadowglass-v35-staging/database-url
+ExecStart=/opt/shadowglass-v35-staging/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8471 --workers 1 --log-level warning --no-access-log
+Restart=no
+TimeoutStartSec=45
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=512M
+TasksMax=64
+LimitNOFILE=2048

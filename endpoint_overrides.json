@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "verified_at": "2026-08-03",
+  "counties": [
+    {
+      "name": "MIDLAND",
+      "active": true,
+      "platform": "PUBLICSEARCH",
+      "base_url": "https://midland.tx.publicsearch.us/",
+      "official_source": "https://www.co.midland.tx.us/175/County-Clerk",
+      "reason": "County Clerk links this current official-public-records portal."
+    },
+    {
+      "name": "ECTOR",
+      "active": true,
+      "platform": "TYLER_TECH",
+      "base_url": "https://ectorcountytx-web.tylerhost.net/web/",
+      "official_source": "https://www.ectorcountytx.gov/172/County-Clerk",
+      "reason": "County Clerk links this current land-records portal."
+    },
+    {
+      "name": "REEVES",
+      "active": true,
+      "platform": "PUBLICSEARCH",
+      "base_url": "https://reeves.tx.publicsearch.us/",
+      "official_source": "https://www.reevescounty.org/departments/county-clerk",
+      "reason": "County Clerk links this current property-records portal."
+    },
+    {
+      "name": "MARTIN",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.martincountytx.com/152/County-District-Clerk",
+      "reason": "The recovered PublicSearch host is retired and no supported official online portal is published."
+    },
+    {
+      "name": "HOWARD",
+      "active": true,
+      "platform": "TYLER_TECH",
+      "base_url": "https://howardcountytx-web.tylerhost.net/web/",
+      "official_source": "https://www.co.howard.tx.us/1208/County-Clerk",
+      "reason": "County Clerk links this current self-service property-records portal."
+    },
+    {
+      "name": "ANDREWS",
+      "active": true,
+      "platform": "TYLER_TECH",
+      "base_url": "https://andrewscountytx-web.tylerhost.net/web/",
+      "official_source": "https://www.co.andrews.tx.us/322/Online-Official-Public-Records-Search",
+      "reason": "County Clerk publishes this current official-public-records portal."
+    },
+    {
+      "name": "WARD",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.ward.tx.us/page/ward.county.clerk",
+      "reason": "The county now uses LGS Online Solutions, for which this recovered worker has no verified adapter."
+    },
+    {
+      "name": "CRANE",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.crane.tx.us/page/crane.county.clerk",
+      "reason": "The county now uses Tyler EagleWeb, not the supported Tyler Self-Service workflow."
+    },
+    {
+      "name": "PECOS",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.pecos.tx.us/department/county-clerk/",
+      "reason": "The county now publishes Kofile and CountyGovernmentRecords portals without a verified adapter."
+    },
+    {
+      "name": "LOVING",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.loving.tx.us/page/loving.County.Clerk",
+      "reason": "The county now uses Tyler EagleWeb, not the supported Tyler Self-Service workflow."
+    },
+    {
+      "name": "UPTON",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.upton.tx.us/page/upton.County.Clerk",
+      "reason": "The official page publishes a court-records portal but no supported real-property portal."
+    },
+    {
+      "name": "WINKLER",
+      "active": true,
+      "platform": "TYLER_TECH",
+      "base_url": "https://winklercauotx-web.tylerhost.net/web/",
+      "official_source": "https://www.co.winkler.tx.us/193/County-Clerk",
+      "reason": "County Clerk links this current self-service property-records portal."
+    },
+    {
+      "name": "GLASSCOCK",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.glasscock.tx.us/page/glasscock.County.Clerk",
+      "reason": "The county now uses iDocMarket, for which this recovered worker has no verified adapter."
+    },
+    {
+      "name": "DAWSON",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.dawson.tx.us/page/dawson.county.clerk",
+      "reason": "The recovered PublicSearch host is retired and no supported official online portal is published."
+    },
+    {
+      "name": "GAINES",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.gaines.tx.us/page/gaines.county.clerk",
+      "reason": "The county now uses LGS Online Solutions, for which this recovered worker has no verified adapter."
+    },
+    {
+      "name": "STERLING",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.sterling.tx.us/page/sterling.County.Clerk",
+      "reason": "The recovered PublicSearch host is retired and no supported official online portal is published."
+    },
+    {
+      "name": "CULBERSON",
+      "active": false,
+      "platform": null,
+      "base_url": null,
+      "official_source": "https://www.co.culberson.tx.us/page/County.Clerk",
+      "reason": "The available Kofile archive has no verified adapter and does not cover the current workflow."
+    },
+    {
+      "name": "TAYLOR",
+      "active": true,
+      "platform": "TYLER_TECH",
+      "base_url": "https://taylorcountytx-web.tylerhost.net/web/",
+      "official_source": "https://www.taylorcounty.texas.gov/281/Official-Public-Real-Property-Records",
+      "reason": "County Clerk publishes this current Super Search property-records portal."
+    }
+  ]
+}

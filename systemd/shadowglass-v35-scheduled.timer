@@ -1,0 +1,12 @@
+[Unit]
+Description=Run ShadowGlass v35 at minute zero of each UTC hour
+
+[Timer]
+OnCalendar=*-*-* *:00:00 UTC
+Persistent=true
+RandomizedDelaySec=0
+AccuracySec=1s
+Unit=shadowglass-v35-scheduled.service
+
+[Install]
+WantedBy=timers.target

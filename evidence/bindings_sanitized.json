@@ -1,0 +1,15 @@
+{
+  "worker_name": "shadowglass-v35",
+  "metadata_sha256": "f2641736ec38da62fa80655dc3d2af14faeeafa6653be23bb724c689a2e5f393",
+  "bindings": [
+    {"name": "DB", "type": "d1", "referenced": true},
+    {"name": "DEDUP_KV", "type": "kv_namespace", "referenced": true},
+    {"name": "ENVIRONMENT", "type": "plain_text", "referenced": true},
+    {"name": "MAX_PAGES_PER_JOB", "type": "plain_text", "referenced": true},
+    {"name": "RECORDS_PER_PAGE", "type": "plain_text", "referenced": true},
+    {"name": "RELAY_URL", "type": "plain_text", "referenced": true},
+    {"name": "SCRAPE_QUEUE", "type": "queue", "referenced": true},
+    {"name": "R2_RECORDS", "type": "r2_bucket", "referenced": true}
+  ],
+  "secret_values_present": false
+}
