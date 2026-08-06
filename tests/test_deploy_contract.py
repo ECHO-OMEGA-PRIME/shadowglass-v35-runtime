@@ -13,6 +13,7 @@ def test_deploy_gate_contains_both_forced_rollback_paths() -> None:
     script = (ROOT / "deploy_shadowglass_v35.sh").read_text(encoding="utf-8")
     assert "--force-staging-failure" in script
     assert "--force-production-failure" in script
+    assert "((rc != 0)) || rc=1" in script
     assert "rollback_local" in script
     assert "cloudflare_reconcile.py\" disable" in script
     assert "cloudflare_reconcile.py\" restore" in script

@@ -124,6 +124,11 @@ SOURCE_SELECT: dict[str, tuple[str, ...]] = {
     "scrape_logs": tuple(f'"{column}"' for column in TABLE_COLUMNS["scrape_logs"]),
 }
 
+SOURCE_EXPRESSION_BY_TARGET: dict[str, dict[str, str]] = {
+    table: dict(zip(TABLE_COLUMNS[table], expressions, strict=True))
+    for table, expressions in SOURCE_SELECT.items()
+}
+
 # Mutable checkpoint/status columns are intentionally excluded.  These
 # identities prove every rescued row is still present without treating later
 # operational counters, endpoint activation, or timestamps as corruption.
@@ -202,9 +207,10 @@ def open_verified_d1(
 
 
 def _source_rows(source: sqlite3.Connection, table: str, columns: tuple[str, ...]) -> Iterable[tuple[Any, ...]]:
-    if columns != TABLE_COLUMNS[table]:
-        raise ValueError("source projection does not match the target contract")
-    projection = ", ".join(SOURCE_SELECT[table])
+    expressions = SOURCE_EXPRESSION_BY_TARGET[table]
+    if not columns or any(column not in expressions for column in columns):
+        raise ValueError("source projection is outside the target contract")
+    projection = ", ".join(expressions[column] for column in columns)
     cursor = source.execute(f'SELECT {projection} FROM "{table}" ORDER BY "id"')
     while True:
         rows = cursor.fetchmany(2_000)

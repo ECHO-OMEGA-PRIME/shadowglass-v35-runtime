@@ -17,7 +17,7 @@ def _create_d1(path: Path) -> None:
         for table, columns in import_d1.SOURCE_TABLE_COLUMNS.items():
             definitions = []
             for column in columns:
-                sql_type = "INTEGER" if column == "id" else "TEXT"
+                sql_type = "INTEGER" if column in {"id", "is_active"} else "TEXT"
                 definitions.append(f'"{column}" {sql_type}')
             connection.execute(f'CREATE TABLE "{table}" ({", ".join(definitions)})')
         connection.commit()
@@ -35,6 +35,28 @@ def test_d1_opens_only_after_hash_and_integrity_verification(tmp_path: Path) -> 
         stream.write(b"tamper")
     with pytest.raises(ValueError, match="SHA256"):
         import_d1.open_verified_d1(rescue, expected_sha256=expected)
+
+
+def test_d1_source_projection_supports_subset_identity_checks(tmp_path: Path) -> None:
+    rescue = tmp_path / "shadowglass-scraper.sqlite3"
+    _create_d1(rescue)
+    with sqlite3.connect(rescue) as connection:
+        connection.execute(
+            'INSERT INTO "counties" '
+            '("id", "name", "state", "base_url", "is_active", '
+            '"total_instruments", "last_scraped_at", "created_at", "platform") '
+            "VALUES (1, 'Test', 'TX', 'https://example.test/', 0, 0, NULL, NULL, NULL)"
+        )
+    with sqlite3.connect(rescue) as connection:
+        assert list(import_d1._source_rows(connection, "counties", ("id",))) == [(1,)]
+        projected = list(
+            import_d1._source_rows(
+                connection,
+                "counties",
+                import_d1.TABLE_COLUMNS["counties"],
+            )
+        )
+    assert projected == [(1, "Test", "TX", "https://example.test/", None, 0, None)]
 
 
 def test_d1_import_is_noop_when_receipt_and_target_match(

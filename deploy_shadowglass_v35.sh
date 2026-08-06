@@ -210,6 +210,7 @@ rollback_local() {
 
 on_error() {
   local rc=$? restore_rc=0
+  ((rc != 0)) || rc=1
   trap - ERR
   set +e
   if ((CF_MUTATED)); then
