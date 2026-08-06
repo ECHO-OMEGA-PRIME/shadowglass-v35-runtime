@@ -1,0 +1,25 @@
+{
+  "worker_name": "shadowglass-v7-command",
+  "provenance": {
+    "canonical_catalog_source": {
+      "sha256": "f152b35554706e35f989524d52910077ca746e6f67a19a65039dd9686e382ab7"
+    },
+    "strict_recovered_bundle": {
+      "source_path": "/mnt/cf_kv_r2/workers/shadowglass-v7-command/source/index.js",
+      "sha256": "ae46a39a494e01049ce0bc6ca0fb25cec07e7f5f7e853edd645bba1da0cd410e"
+    }
+  },
+  "runtime": {
+    "service_dir": "/home/forge/shadowglass-v7-command",
+    "api_unit": "shadowglass-v7-command.service",
+    "timer_unit": "shadowglass-v7-command-scheduler.timer"
+  },
+  "routes": {
+    "contract_path": "evidence/route_contract.json",
+    "source_count": 17,
+    "target_count": 17,
+    "tested_count": 17,
+    "coverage": 1.0,
+    "omissions": []
+  }
+}
